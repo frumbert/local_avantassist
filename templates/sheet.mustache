@@ -1,0 +1,23 @@
+<table>
+<thead>
+    <tr>
+        <th></th>
+        <th></th>
+        {{#sections}}<th colspan="{{activitycount}}">{{title}}</th>{{/sections}}
+    </tr>
+    <tr>
+        <th>Member ID</th>
+        <th>Member name</th>
+        {{#sections}}{{#activities}}<th>{{title}}</th>{{/activities}}{{/sections}}
+    </tr>
+</thead>
+<tbody>
+{{#users}}
+    <tr>
+        <td>{{memberid}}</td>
+        <td>{{name}}</td>
+        {{#records}}<td>{{.}}</td>{{/records}}
+    </tr>
+{{/users}}
+</tbody>
+</table>
