@@ -27,3 +27,6 @@ $string['predefined_dates'] = '<div class="row"><div class="col-md-3">Predefined
 <a href="?report={$a}&range=all" class="btn btn-link">All time</a> </div></div>';
 
 $string['generate_reports'] = 'Generate Reports';
+
+$string['clicks_title'] = 'Clicks';
+$string['home_title'] = 'Home';

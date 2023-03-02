@@ -409,12 +409,12 @@ global $CFG, $DB;
             if ($i === 0) {
                 $a = new stdClass();
                 $a->type = "views";
-                $a->title = "Home";
+                $a->title = get_string('home_title','local_avantassist');
                 $s->activities[] = $a;
             } else {
                 $a = new stdClass();
                 $a->type = "views";
-                $a->title = "Clicks";
+                $a->title = get_string('clicks_title','local_avantassist');
                 $s->activities[] = $a;
             }
             foreach ($modinfo->sections[$i] as $cmid) {
