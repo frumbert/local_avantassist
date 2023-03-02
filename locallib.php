@@ -76,6 +76,8 @@ global $DB;
 function local_avantassist_count_hits($course,$user, $datefrom = 0, $dateto = 0) {
 global $DB;
 
+    $firstlogin = '-';
+    $lastlogin = '-';
     $params = [];
     $andtime = '';
     if ($datefrom>0 && $dateto>0) {
@@ -83,29 +85,41 @@ global $DB;
         $params['datefrom'] = $datefrom;
         $params['dateto'] = $dateto;
     }
-    $sql = "SELECT COUNT(1) FROM {logstore_standard_log} WHERE eventname=:eventname AND userid=:userid{$andtime}";
-    $params['eventname'] = "\\core\\event\\user_loggedin";
+
+    // $sql = "SELECT COUNT(1) FROM {logstore_standard_log} WHERE eventname=:eventname AND userid=:userid{$andtime}";
+    // $params['eventname'] = "\\core\\event\\user_loggedin";
     $params['userid'] = $user->id;
-    $logins = $DB->count_records_sql($sql, $params);
+    $logins = 0 ; // $DB->count_records_sql($sql, $params);
 
     $sql = "SELECT COUNT(1) FROM {logstore_standard_log} WHERE eventname=:eventname AND courseid=:courseid AND userid=:userid{$andtime}";
     $params['eventname'] = "\\core\\event\\course_viewed";
     $params['courseid'] = $course->id;
     $views = $DB->count_records_sql($sql, $params);
 
-    $sql = "SELECT timecreated FROM {logstore_standard_log} WHERE eventname=:eventname AND courseid=:courseid AND userid=:userid ORDER BY timecreated LIMIT 1";
-    $params['eventname'] = "\\core\\event\\course_viewed";
-    $params['courseid'] = $course->id;
-    if ($firstlogin = $DB->get_record_sql($sql, $params)) {
-        $firstlogin = userdate($firstlogin->timecreated);
-    } else {
-        $firstlogin = '-';
-    }
-
-    if ($user->login > 0) {
-        $lastlogin = userdate($user->login);
-    } else {
-        $lastlogin = '-';
+    // first timecreated of a \core\event\course_viewed that takes place after a \core\event\user_loggedin in an avant-assist course
+    // so find the course-view and ensure it follows a user_loggedin. multipe course-views will probably follow a loggedin, so group-by the user/course and order by timecreated to grab the first of each group
+    // then limit it to the user you need.
+    $sql = "SELECT timecreated from {logstore_standard_log} l
+        where (eventname = :viewed and l.courseid = :courseid)
+        and l.userid = (
+        select userid from {logstore_standard_log}
+            where (eventname = :loggedin and courseid = 0)
+            and id < l.id
+            and userid = l.userid
+            order by id desc limit 1
+        )
+        and l.userid = :userid
+        {$andtime}
+        group by userid, courseid
+        order by timecreated";
+    $params['loggedin'] = "\\core\\event\\user_loggedin";
+    $params['viewed'] = "\\core\\event\\course_viewed";
+    unset($params['eventname']);
+    $records = $DB->get_records_sql($sql,$params);
+    if ($records) {
+        $first = reset($records); if ($first)  $firstlogin = userdate($first->timecreated);
+        $last = end($records); if ($last)  $lastlogin = userdate($last->timecreated);
+        $logins = count($records);
     }
 
     return (object)[
@@ -184,6 +198,7 @@ global $CFG, $DB;
                 $a->title = html_to_text($row->name, 0, false);
                 $a->cmid = $cmid;
                 $a->mod = $mod;
+                if ($mod->visible == 0) $a->title .= ' (hidden)';
                 $s->activities[] = $a;
             }
             $s->activitycount = count($s->activities);
